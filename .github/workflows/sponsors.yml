@@ -2,8 +2,8 @@
 name: Generate Sponsors
 on:  # yamllint disable-line rule:truthy
   workflow_dispatch:
-  schedule:
-    - cron: 0 0 * * *
+  # schedule disabled:
+  #   - cron: 0 0 * * *
 jobs:
   sponsors:
     runs-on: ubuntu-latest
