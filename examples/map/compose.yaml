@@ -1,3 +1,4 @@
+---
 services:
   palworld:
     extends:
@@ -5,10 +6,10 @@ services:
       service: palworld
     build: ../../
     cap_add:
-      - NET_RAW # for podman (docker default has it)
-      - NET_ADMIN # NFLOG requires this
+      - NET_RAW    # for podman (docker default has it)
+      - NET_ADMIN  # NFLOG requires this
     environment:
-      SERVER_NAME: "palworld-server-docker/examples/autopause"
+      SERVER_NAME: "palworld-server-docker/examples/map"
       AUTO_PAUSE_ENABLED: true
       AUTO_PAUSE_TIMEOUT_EST: 10  # Number of seconds before auto pausing.
       AUTO_PAUSE_LOG: true
@@ -23,7 +24,6 @@ services:
       PROXY_PORT: 8212
       LOG_LEVEL: error
     volumes:
-      # .paused ファイルを監視するために Read-Only でマウント
       - ../../palworld:/palworld:ro
 
   map:
@@ -38,4 +38,3 @@ services:
       - "${HTTP_PORT:-8080}:8080"
     volumes:
       - ../../palworld:/palworld-data:ro
-
