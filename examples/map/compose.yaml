@@ -18,7 +18,6 @@ services:
 
   api_proxy:
     image: ghcr.io/musclepr/palworld-api-proxy:latest
-    build: ./api_proxy/
     environment:
       TARGET_URL: http://palworld:8212
       PROXY_PORT: 8212
