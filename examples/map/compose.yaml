@@ -29,6 +29,9 @@ services:
   map:
     image: ghcr.io/lukehollanddev/palworld-live-map:latest
     restart: unless-stopped
+    depends_on:
+      palworld:
+        condition: service_healthy
     environment:
       PALWORLD_REST_URL: http://api_proxy:8212
       PALWORLD_ADMIN_PASSWORD: "${ADMIN_PASSWORD:-adminPasswordHere}"
