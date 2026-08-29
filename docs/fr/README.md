@@ -67,7 +67,7 @@ N'oubliez pas que vous devrez modifier les [variables d'environnement](#variable
 
 ### Docker Compose
 
-Ce référentiel comprend un exemple de fichier [docker-compose.yml](/docker-compose.yml)
+Ce référentiel comprend un exemple de fichier [compose.yaml](/compose.yaml)
 que vous pouvez utiliser pour configurer votre serveur.
 
 ```yml
@@ -92,6 +92,7 @@ services:
       TZ: 'UTC'
       ADMIN_PASSWORD: 'adminPasswordHere'
       COMMUNITY: false # Activez ceci si vous souhaitez que votre serveur apparaisse dans l'onglet des serveurs communautaires, À UTILISER AVEC LE MOT DE PASSE DU SERVEUR !
+      # PUBLIC_PORT: 8211
       SERVER_NAME: 'palworld-server-docker par Thijs van Loef'
       SERVER_DESCRIPTION: 'palworld-server-docker par Thijs van Loef'
     volumes:
@@ -100,7 +101,7 @@ services:
 
 En alternative, vous pouvez copier le fichier [.env.example](.env.example) dans un nouveau fichier appelé **.env**.
 Modifiez-le selon vos besoins, consultez la section [environment variables](#variables-d-environnement) pour vérifier les
-valeurs correctes. Modifiez votre fichier [docker-compose.yml](docker-compose.yml) comme suit :
+valeurs correctes. Modifiez votre fichier [compose.yaml](compose.yaml) comme suit :
 
 ```yml
 services:
@@ -185,7 +186,7 @@ Vous devez définir l'utilisateur sur `UID_NUMÉRIQUE:GID_NUMÉRIQUE`
 Ci-dessous, nous supposons que votre UID est 1000 et votre GID est 1001.
 
 - Dans la commande docker run, ajoutez `--user 1000:1001 \` au-dessus de la dernière ligne.
-- Dans le fichier docker-compose, ajoutez `user: 1000:1001` au-dessus des ports.
+- Dans le fichier compose, ajoutez `user: 1000:1001` au-dessus des ports.
 
 Si vous souhaitez l'exécuter avec un UID/GID différent du vôtre, vous devrez changer la
 propriété du répertoire qui est monté : `chown UID:GID palworld/`
@@ -323,7 +324,7 @@ La variable d'environnement `RCON_ENABLED` doit être définie sur `true` pour u
 > Si la redémarrage de Docker n'est pas configuré avec la politique `always` ou `unless-stopped`
 > le serveur s'éteindra et devra être redémarré manuellement.
 >
-> La commande docker run exemple et le fichier docker-compose dans [Comment utiliser](#comment-utiliser)
+> La commande docker run exemple et le fichier compose dans [Comment utiliser](#comment-utiliser)
 > utilisent déjà la politique nécessaire
 
 ## Restauration manuelle à partir d'une sauvegarde
@@ -384,7 +385,7 @@ suivantes **doivent** être définies sur `true`:
 > le serveur s'éteindra et devra être
 > redémarré manuellement.
 >
-> La commande docker run exemple et le fichier docker-compose dans [Comment utiliser](#comment-utiliser)
+> La commande docker run exemple et le fichier compose dans [Comment utiliser](#comment-utiliser)
 > utilisent déjà la politique nécessaire
 
 Définissez AUTO_UPDATE_ENABLED pour activer ou désactiver les mises à jour automatiques (par défaut, c'est désactivé).
@@ -409,7 +410,7 @@ Pour pouvoir utiliser les redémarrages automatiques avec ce serveur, RCON_ENABL
 > le serveur s'éteindra et devra être
 > redémarré manuellement.
 >
-> La commande docker run exemple et le fichier docker-compose dans [Comment utiliser](#comment-utiliser)
+> La commande docker run exemple et le fichier compose dans [Comment utiliser](#comment-utiliser)
 > utilisent déjà la politique nécessaire
 
 Définissez AUTO_REBOOT_ENABLED pour activer ou désactiver les redémarrages automatiques (par défaut, c'est désactivé).
@@ -576,6 +577,36 @@ Le manifeste correspond aux dates de sortie/mises à jour. Les manifestes peuven
 | 0.3.8   | 8676441150170012909 |
 | 0.3.9   | 7493245879597781625 |
 | 0.3.10  | 752220234171168889  |
+| 0.3.11  | 2179856120374736396 |
+| 0.3.12  | 4799126612816973970 |
+| 0.4.12  | 8740356471807192597 |
+| 0.4.13  | 7797657007844256194 |
+| 0.4.14  | 2423583208459052375 |
+| 0.4.15  | 1367771460964183113 |
+| 0.4.15.66880 | 7437307725616060428 |
+| 0.5.1   | 6596731130030310701 |
+| 0.5.2   | 267999471071788047  |
+| 0.5.3   | 7732507078282743071 |
+| 0.5.4   | 5539885758268531766 |
+| 0.5.5   | 7828355383304947    |
+| 0.6.0   | 3764729529995383980 |
+| 0.6.1   | 7756643464666999838 |
+| 0.6.2   | 827371074969047862  |
+| 0.6.4   | 3612882697748699584 |
+| 0.6.5   | 5432643748200410263 |
+| 0.6.6   | 6415730362733705279 |
+| 0.6.7   | 3995671553375425471 |
+| 0.6.8   | 7543835373978771853 |
+| 0.6.9   | 3893574637546538559 |
+| 0.7.0   | 425036885590395310  |
+| 0.7.1   | 2194336714352902668 |
+| 0.7.2   | 7743228609268535996 |
+| 0.7.3   | 5125159522749666228 |
+| 1.0.0   | 3392720560779800260 |
+| 1.0.1   | 2167164727892555341 |
+| 1.0.2   | 1078324976643066553 |
+| 1.0.2.100993 | 6205737992414484907 |
+| 1.0.2.101103 | 1480973772525600530 |
 
 ## Signalement de Problèmes/Demandes de Fonctionnalités
 

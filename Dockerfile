@@ -1,4 +1,4 @@
-FROM golang:1.25.9-alpine AS rcon-cli_builder
+FROM golang:1.25.13-alpine AS rcon-cli_builder
 
 ARG RCON_VERSION="0.10.3"
 ARG RCON_TGZ_SHA1SUM=33ee8077e66bea6ee097db4d9c923b5ed390d583
@@ -17,11 +17,10 @@ RUN wget -q https://github.com/gorcon/rcon-cli/archive/refs/tags/v${RCON_VERSION
     && rm -rf rcon-cli-${RCON_VERSION} \
     && go build -v ./cmd/gorcon
 
-FROM cm2network/steamcmd:root AS base-amd64
+FROM cm2network/steamcmd:root-trixie AS base-amd64
 # Ignoring --platform=arm64 as this is required for the multi-arch build to continue to work on amd64 hosts
 # hadolint ignore=DL3029
-FROM --platform=arm64 sonroyaalmerol/steamcmd-arm64:root-2024-12-22 AS base-arm64
-
+FROM --platform=arm64 sonroyaalmerol/steamcmd-arm64:root-trixie-2026-06-07 AS base-arm64
 ARG TARGETARCH
 # Ignoring the lack of a tag here because the tag is defined in the above FROM lines
 # and hadolint isn't aware of those.
@@ -40,10 +39,11 @@ LABEL maintainer="thijs@loef.dev" \
 # RCON: Latest releases available at https://github.com/gorcon/rcon-cli/releases
 # DEPOT_DOWNLOADER: Latest releases available at https://github.com/SteamRE/DepotDownloader/releases
 # NOTICE: edit RCON_MD5SUM SUPERCRONIC_SHA1SUM when using binaries of another version or arch.
-ARG SUPERCRONIC_SHA1SUM_ARM64="5c6266786c2813d6f8a99965d84452faae42b483"
-ARG SUPERCRONIC_SHA1SUM_AMD64="f97b92132b61a8f827c3faf67106dc0e4467ccf2"
-ARG SUPERCRONIC_VERSION="0.2.43"
+ARG SUPERCRONIC_SHA1SUM_ARM64="639ab81a72771990790df7ee87d9acfe88e5fa83"
+ARG SUPERCRONIC_SHA1SUM_AMD64="5bcefed628e32adc08e32634db2d10e9230dbca0"
+ARG SUPERCRONIC_VERSION="0.2.46"
 ARG DEPOT_DOWNLOADER_VERSION="3.4.0"
+ARG KNOCK_VERSION="0.8.1"
 
 # update and install dependencies
 # hadolint ignore=DL3008
@@ -56,10 +56,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     netcat-traditional \
     unzip \
+    iproute2 \
+    iptables \
+    tcpdump \
     libcap2-bin libpcap0.8 \
     ca-certificates \
     python3 python3-venv python3-pip \
-    && (apt-get install -y --no-install-recommends libicu76 || apt-get install -y --no-install-recommends libicu72) \
+    gosu \
+    && (apt-get install -y --no-install-recommends libicu76 || apt-get install -y --no-install-recommends libicu72 || apt-get install -y --no-install-recommends libicu67) \
+    && (apt-get install -y --no-install-recommends libsdl3-0 || apt-get install -y --no-install-recommends libsdl3-0-0) \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -94,8 +99,12 @@ RUN case "${TARGETARCH}" in \
     && chmod +x DepotDownloader \
     && mv DepotDownloader /usr/local/bin/DepotDownloader
 
+# AUTO_PAUSE: install backend monitoring tools (iptables, tcpdump, knockd) and set capabilities for non-root usage
+# setcap for tcpdump/iptables to allow non-root NFLOG monitoring and rule updates
+RUN setcap cap_net_raw,cap_net_admin=ep "$(readlink -f "$(command -v tcpdump)")" && \
+    setcap cap_net_admin=ep "$(readlink -f "$(command -v iptables)")"
 # install patched knockd (as same as https://github.com/itzg/docker-minecraft-server/blob/master/build/ubuntu/install-packages.sh)
-RUN wget --progress=dot:giga https://github.com/Metalcape/knock/releases/download/0.8.1/knock-0.8.1-${TARGETARCH}.tar.gz -O /tmp/knock.tar.gz && \
+RUN wget --progress=dot:giga https://github.com/Metalcape/knock/releases/download/0.8.1/knock-${KNOCK_VERSION}-${TARGETARCH}.tar.gz -O /tmp/knock.tar.gz && \
     tar -xf /tmp/knock.tar.gz -C /usr/local/ && rm /tmp/knock.tar.gz && \
     ln -s /usr/local/sbin/knockd /usr/sbin/knockd && \
     setcap cap_net_raw=ep /usr/local/sbin/knockd && \
@@ -137,6 +146,7 @@ ENV HOME=/home/steam \
     AUTO_PAUSE_TIMEOUT_EST=180 \
     AUTO_PAUSE_LOG=true \
     AUTO_PAUSE_DEBUG=false \
+    AUTO_PAUSE_KNOCKD_IF=auto \
     DISCORD_SUPPRESS_NOTIFICATIONS= \
     DISCORD_WEBHOOK_URL= \
     DISCORD_CONNECT_TIMEOUT=30 \
@@ -180,11 +190,13 @@ ENV HOME=/home/steam \
     ENABLE_PLAYER_LOGGING=true \
     PLAYER_LOGGING_POLL_PERIOD=5 \
     ARM64_DEVICE=generic \
+    PALWORLD_ALLOW_NEGATIVE_DELTA_TIME=false \
     DISABLE_GENERATE_ENGINE=true \
     CROSSPLAY_PLATFORMS="(Steam,Xbox,PS5,Mac)" \
     USE_DEPOT_DOWNLOADER=false \
     INSTALL_BETA_INSIDER=false \
     LOG_FILTER_ENABLED=true \
+    LOG_LEVEL=INFO \
     LOG_FORMAT_TYPE=default
 
 # Sane Box64 config defaults

@@ -2,6 +2,14 @@
 # shellcheck source=scripts/helper_functions.sh
 source "/home/steam/server/helper_functions.sh"
 
+# shellcheck source=scripts/negative_delta_recovery.sh
+source "/home/steam/server/negative_delta_recovery.sh"
+
+if ! ValidateNegativeDeltaRecoverySetting; then
+    LogError "PALWORLD_ALLOW_NEGATIVE_DELTA_TIME must be true or false."
+    exit 1
+fi
+
 # Helper Functions for installation & updates
 # shellcheck source=scripts/helper_install.sh
 source "/home/steam/server/helper_install.sh"
@@ -25,8 +33,10 @@ fi
 
 # Always update on boot even if the server is installed, to prevent appmanifest issues
 if [ "$ServerInstalled" == 0 ] && [ "${UPDATE_ON_BOOT,,}" == true ]; then
-    rm /palworld/steamapps/appmanifest_2394010.acf
-    InstallServer
+    if UpdateRequired; then
+        rm /palworld/steamapps/appmanifest_2394010.acf
+        InstallServer
+    fi
 fi
 
 STARTCOMMAND=("./PalServer.sh")
@@ -49,7 +59,11 @@ if [ "$architecture" == "arm64" ]; then
 fi
 
 isReadable "${STARTCOMMAND[0]}" || exit
-isExecutable "${STARTCOMMAND[0]}" || exit
+if ! isExecutable "${STARTCOMMAND[0]}"; then
+    LogWarn "Attempt to make \"${STARTCOMMAND[0]}\" executable"
+    chmod +x "${STARTCOMMAND[0]}" || exit
+    isExecutable "${STARTCOMMAND[0]}" || exit
+fi
 
 # Prepare Arguments
 if [ -n "${PORT}" ]; then
@@ -64,8 +78,32 @@ if [ "${COMMUNITY,,}" = true ]; then
     STARTCOMMAND+=("-publiclobby")
 fi
 
+if [ "${ENABLE_PERF_THREADING_ARGS,,}" = true ]; then
+    STARTCOMMAND+=("-useperfthreads" "-NoAsyncLoadingThread" "-UseMultithreadForDS")
+fi
+
+if [ "${PALWORLD_ALLOW_NEGATIVE_DELTA_TIME,,}" = true ]; then
+    STARTCOMMAND+=("-ini:Engine:[ConsoleVariables]:Pal.AllowNegativeDeltaTime=1")
+fi
+
+if [ -n "${WORKER_THREADS_SERVER}" ]; then
+    STARTCOMMAND+=("-NumberOfWorkerThreadsServer=${WORKER_THREADS_SERVER}")
+fi
+
+# Backward compatibility (deprecated)
 if [ "${MULTITHREADING,,}" = true ]; then
-    STARTCOMMAND+=("-useperfthreads" "-NoAsyncLoadingThread" "-UseMultithreadForDS" "-NumberOfWorkerThreadsServer=$(nproc --all)")
+    LogWarn "MULTITHREADING is deprecated. Use ENABLE_PERF_THREADING_ARGS and WORKER_THREADS_SERVER instead."
+    if [ "${ENABLE_PERF_THREADING_ARGS,,}" != true ]; then
+        STARTCOMMAND+=("-useperfthreads" "-NoAsyncLoadingThread" "-UseMultithreadForDS")
+    fi
+
+    if [ -z "${WORKER_THREADS_SERVER}" ]; then
+        STARTCOMMAND+=("-NumberOfWorkerThreadsServer=$(nproc --all)")
+    fi
+fi
+
+if [ "${ENABLE_GAMEDATA_API,,}" = true ]; then
+    STARTCOMMAND+=("-enable-gamedata-api")
 fi
 
 LogAction "Checking for available container updates"
@@ -78,16 +116,9 @@ if [ "${DISABLE_GENERATE_SETTINGS,,}" = true ]; then
   # shellcheck disable=SC2143
   if [ ! "$(grep -s '[^[:space:]]' /palworld/Pal/Saved/Config/LinuxServer/PalWorldSettings.ini)" ]; then
       LogAction "GENERATING CONFIG"
-      # Server will generate all ini files after first run.
-      if [ "$architecture" == "arm64" ]; then
-          timeout --preserve-status 15s ./PalServer-arm64.sh 1> /dev/null
-      else
-          timeout --preserve-status 15s ./PalServer.sh 1> /dev/null
-      fi
-
-      # Wait for shutdown
-      sleep 5
-      cp /palworld/DefaultPalWorldSettings.ini /palworld/Pal/Saved/Config/LinuxServer/PalWorldSettings.ini
+      mkdir -p /palworld/Pal/Saved/Config/LinuxServer || exit
+      fileExists "/palworld/DefaultPalWorldSettings.ini" || exit
+      cp "/palworld/DefaultPalWorldSettings.ini" "/palworld/Pal/Saved/Config/LinuxServer/PalWorldSettings.ini" || exit
   fi
 else
   LogAction "GENERATING CONFIG"
@@ -141,7 +172,7 @@ EOL
 CHILD_PIDS=()
 if PlayerLogging_isEnabled; then
     if [[ "$(id -u)" -eq 0 ]]; then
-        su steam -c /home/steam/server/player_logging.sh &
+        gosu steam /home/steam/server/player_logging.sh &
     else
         /home/steam/server/player_logging.sh &
     fi

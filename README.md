@@ -1,5 +1,13 @@
 # Palworld Dedicated Server Docker
 
+> [!IMPORTANT]
+>
+> ## Fully compatible with Palworld 1.0 release
+>
+> Please check
+> [issue](https://github.com/thijsvanloef/palworld-server-docker/issues/834)
+> to see if there are any known issues with the 1.0 release of Palworld.
+
 [![Release](https://img.shields.io/github/v/release/thijsvanloef/palworld-server-docker)](https://github.com/thijsvanloef/palworld-server-docker/releases)
 [![Docker Pulls](https://img.shields.io/docker/pulls/thijsvanloef/palworld-server-docker)](https://hub.docker.com/r/thijsvanloef/palworld-server-docker)
 [![Docker Stars](https://img.shields.io/docker/stars/thijsvanloef/palworld-server-docker)](https://hub.docker.com/r/thijsvanloef/palworld-server-docker)
@@ -62,7 +70,7 @@ Keep in mind that you'll need to change the [environment variables](#environment
 
 ### Docker Compose
 
-This repository includes an example [docker-compose.yml](/docker-compose.yml) file you can use to set up your server.
+This repository includes an example [compose.yaml](/compose.yaml) file you can use to set up your server.
 
 ```yml
 services:
@@ -74,19 +82,19 @@ services:
       ports:
         - 8211:8211/udp
         - 27015:27015/udp
-        - 8212:8212/tcp  # REST API enabled port, enabled by default. DO NOT PORT FORWARD THIS.
+        # - 8212:8212/tcp  # REST API enabled port, enabled by default. DO NOT PORT FORWARD THIS.
       environment:
          PUID: 1000
          PGID: 1000
          PORT: 8211 # Optional but recommended
          PLAYERS: 16 # Optional but recommended
          SERVER_PASSWORD: "worldofpals" # Optional but recommended
-         MULTITHREADING: true
          REST_API_ENABLED: true
          REST_API_PORT: 8212
          TZ: "UTC"
          ADMIN_PASSWORD: "adminPasswordHere"
          COMMUNITY: false  # Enable this if you want your server to show up in the community servers tab, USE WITH SERVER_PASSWORD!
+         # PUBLIC_PORT: 8211 # If enabling community server and using a different public port you must change this
          SERVER_NAME: "palworld-server-docker by Thijs van Loef"
          SERVER_DESCRIPTION: "palworld-server-docker by Thijs van Loef"
          CROSSPLAY_PLATFORMS: "(Steam,Xbox,PS5,Mac)"
@@ -96,7 +104,7 @@ services:
 
 As an alternative, you can copy the [.env.example](.env.example) file to a new file called **.env** file.
 Modify it to your needs, check out the [environment variables](#environment-variables) section to check the correct
-values. Modify your [docker-compose.yml](docker-compose.yml) to this:
+values. Modify your [compose.yaml](compose.yaml) to this:
 
 ```yml
 services:
@@ -129,7 +137,6 @@ docker run -d \
     -e PGID=1000 \
     -e PORT=8211 \
     -e PLAYERS=16 \
-    -e MULTITHREADING=true \
     -e REST_API_ENABLED=true \
     -e REST_API_PORT=8212 \
     -e TZ=UTC \
@@ -210,7 +217,10 @@ It is highly recommended you set the following environment values before startin
 | PORT*                                      | UDP port that the server will expose                                                                                                                                                                | 8211                                                                                               | 1024-65535                                                                                                        | 0.1.0            |
 | PUID*                                      | The uid of the user the server should run as                                                                                                                                                        | 1000                                                                                               | !0                                                                                                                | 0.6.0            |
 | PGID*                                      | The gid of the group the server should run as                                                                                                                                                       | 1000                                                                                               | !0                                                                                                                | 0.6.0            |
-| MULTITHREADING**                           | Improves performance in multi-threaded CPU environments. It is effective up to a maximum of about 4 threads, and allocating more than this number of threads does not make much sense.              | false                                                                                              | true/false                                                                                                        | 0.1.0            |
+| MULTITHREADING `DEPRECATED`**             | Deprecated compatibility flag. Use ENABLE_PERF_THREADING_ARGS and WORKER_THREADS_SERVER instead.                                                    | false                                                                                              | true/false                                                                                                        | 0.1.0            |
+| ENABLE_PERF_THREADING_ARGS                | Enables performance-related threading startup arguments (`-useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS`).                            | false                                                                                              | true/false                                                                                                        | 2.1.0            |
+| WORKER_THREADS_SERVER                      | Sets `-NumberOfWorkerThreadsServer`. Leave empty to use the game's default. When using deprecated MULTITHREADING=true, this defaults to all CPUs. |                                                                                                    | Positive integer                                                                                                  | 2.1.0            |
+| PALWORLD_ALLOW_NEGATIVE_DELTA_TIME         | Enables Palworld's built-in recovery for negative DeltaTime through an Engine ini override. This opt-in mitigation does not correct or synchronize the host or VM clock. | false                                                                                              | true/false                                                                                                        | 2.7.0            |
 | COMMUNITY                                  | Whether or not the server shows up in the community server browser (USE WITH SERVER_PASSWORD)                                                                                                       | false                                                                                              | true/false                                                                                                        | 0.1.0            |
 | PUBLIC_IP                                  | You can manually specify the global IP address of the network on which the server running. If not specified, it will be detected automatically. If it does not work well, try manual configuration. |                                                                                                    | x.x.x.x                                                                                                           | 0.1.0            |
 | PUBLIC_PORT                                | You can manually specify the port number of the network on which the server running. If not specified, it will be detected automatically. If it does not work well, try manual configuration.       |                                                                                                    | 1024-65535                                                                                                        | 0.1.0            |
@@ -218,11 +228,12 @@ It is highly recommended you set the following environment values before startin
 | SERVER_DESCRIPTION                         | Your server Description                                                                                                                                                                             |                                                                                                    | "string"                                                                                                          | 0.1.0            |
 | SERVER_PASSWORD                            | Secure your community server with a password                                                                                                                                                        |                                                                                                    | "string"                                                                                                          | 0.1.0            |
 | ADMIN_PASSWORD                             | Secure administration access in the server with a password                                                                                                                                          |                                                                                                    | "string"                                                                                                          | 0.4.0            |
-| UPDATE_ON_BOOT**                           | Update/Install the server when the docker container starts (THIS HAS TO BE ENABLED THE FIRST TIME YOU RUN THE CONTAINER)                                                                            | true                                                                                               | true/false                                                                                                        | 0.3.0            |
+| UPDATE_ON_BOOT**                           | Update/Install the server when the docker container starts | true                                                                                               | true/false                                                                                                        | 0.3.0            |
 | RCON_ENABLED***                            | Enable RCON for the Palworld server                                                                                                                                                                 | false                                                                                              | true/false                                                                                                        | 0.1.0            |
 | RCON_PORT                                  | RCON port to connect to                                                                                                                                                                             | 25575                                                                                              | 1024-65535                                                                                                        | 0.1.0            |
 | REST_API_ENABLED                           | Enable REST API for the palworld server                                                                                                                                                             | true                                                                                              | true/false                                                                                                        | 0.35.0           |
 | REST_API_PORT                              | REST API port to connect to                                                                                                                                                                         | 8212                                                                                               | 1024-65535                                                                                                        | 0.35.0           |
+| ENABLE_GAMEDATA_API                        | Enable the Palworld game data API by adding `-enable-gamedata-api` at server start.                                                                                                              | false                                                                                              | true/false                                                                                                        | 2.1.0            |
 | QUERY_PORT                                 | Query port used to communicate with Steam servers                                                                                                                                                   | 27015                                                                                              | 1024-65535                                                                                                        | 0.1.0            |
 | ALLOW_CONNECT_PLATFORM `DEPRECATED`                    | Specify if you are hosting a dedicated server for Steam or Xbox players                                                                                                                             | Steam                                                                                              | Steam/Xbox                                                                                                        | 0.38.0           |
 | BACKUP_CRON_EXPRESSION                     | Setting affects frequency of automatic backups.                                                                                                                                                     | 0 0 \* \* \*                                                                                       | Needs a Cron-Expression - See [Configuring Automatic Backups with Cron](#configuring-automatic-backups-with-cron) | 0.19.0           |
@@ -291,6 +302,7 @@ It is highly recommended you set the following environment values before startin
 | PLAYER_LOGGING_POLL_PERIOD                 | Polling period (in seconds) to check for players who have joined or left                                                                                                                            | 5                                                                                                  | !0                                                                                                                | 0.31.0           |
 | USE_DEPOT_DOWNLOADER                     | Uses DepotDownloader to download game server files instead of steamcmd. This will help hosts incompatible with steamcmd (e.g. M-series Mac)                                                    | false                                                                                              | true/false                                                                                                        | 0.39.0           |
 | LOG_FILTER_ENABLED                         | Enable filter to reduce duplicated log lines                                                                                                                                                        | true                                                                                               | true/false                                                                                                        | 2.0.1            |
+| LOG_LEVEL                                  | Minimum container log level to emit (`DEBUG` < `INFO` < `WARN` < `ERROR`; `SUCCESS`/`ACTION` are treated as `INFO`)                                                                             | INFO                                                                                               | DEBUG/INFO/WARN/ERROR/OFF                                                                                         | 2.1.0            |
 | LOG_FORMAT_TYPE                            | Configure log format type                                                                                                                                                                           | default                                                                                            | json/logfmt/colored/plain/default                                                                                 | 2.0.1            |
 
 *highly recommended to set
@@ -370,7 +382,7 @@ For a full list of commands go to: [https://tech.palworldgame.com/settings-and-o
 
 REST API is enabled by default.
 
-docker-compose.override.yml
+compose.override.yml
 
 ```yaml
 services:
@@ -577,12 +589,13 @@ This feature can be enabled by setting the environment variable `AUTO_PAUSE_ENAB
 > [!INFO]
 > This feature requires `ENABLE_PLAYER_LOGGING=true` and `REST_API_ENABLED=true` to be set.
 
-| Variable               | Info                                                                                                                                     | Default Values | Allowed Values |
-|------------------------|------------------------------------------------------------------------------------------------------------------------------------------|----------------|----------------|
+| Variable               | Info                                                                                                                                                                  | Default Values | Allowed Values |
+|------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------|----------------|
 | AUTO_PAUSE_ENABLED     | Enables automatic pause (Puts the server to sleep to save power when there are no online players). Requires `ENABLE_PLAYER_LOGGING=true` and `REST_API_ENABLED=true`. | false          | true/false     |
-| AUTO_PAUSE_TIMEOUT_EST | default 180 (seconds) describes the time between the last client disconnect and the pausing of the process (read as timeout established) | 180            | Integer        |
-| AUTO_PAUSE_LOG         | Enable auto-pause logging                                                                                                                | true           | true/false     |
-| AUTO_PAUSE_DEBUG       | Enable auto-pause debug logging                                                                                                          | false          | true/false     |
+| AUTO_PAUSE_TIMEOUT_EST | default 180 (seconds) describes the time between the last client disconnect and the pausing of the process (read as timeout established)                              | 180            | Integer        |
+| AUTO_PAUSE_LOG         | Enable auto-pause logging                                                                                                                                             | true           | true/false     |
+| AUTO_PAUSE_DEBUG       | Enable auto-pause debug logging                                                                                                                                       | false          | true/false     |
+| AUTO_PAUSE_KNOCKD_IF   | Network interfaces to listen for connection knocks. Use `auto` (default) for automatic detection of active interfaces, or specify interfaces explicitly.              | auto           | auto/"eth0 lo" |
 
 If you want timestamps in the container logs for auto-pause events, either run `docker logs -t palworld-server`
 or set `LOG_FORMAT_TYPE=plain` or `LOG_FORMAT_TYPE=colored`.
@@ -592,13 +605,18 @@ or set `LOG_FORMAT_TYPE=plain` or `LOG_FORMAT_TYPE=colored`.
 
 > [!NOTE]
 > When using **Podman**, you must add the `--cap-add=NET_RAW` option to the `run` or `create` command.
-> Alternatively, add the following `cap_add:` to your `compose.yml`:
+> AUTO_PAUSE prefers an NFLOG packet monitor when available.
+> If NFLOG setup fails at startup, the system will automatically fall back to knockd.
+> Add the following capability only when you want to use NFLOG monitoring:
+> `--cap-add=NET_ADMIN`
+> Alternatively, add the following `cap_add:` to your `compose.yaml`:
 >
 > ```yaml
 > services:
 >   palworld:
 >     cap_add:
 >       - NET_RAW
+>       - NET_ADMIN
 > ```
 
 ### Resume manually
@@ -636,6 +654,8 @@ maintain registration on the community server list.
 The proxy server captures communication with `api.palworldgames.com`.
 
 The auto-pause service will replay captured data in the paused state.
+
+If using a different public port (Other than 8211) for the community server you must set `PUBLIC_PORT` to the public port being used.
 
 ## Editing Server Settings
 
@@ -688,7 +708,7 @@ For example:
 | COLLECTION_OBJECT_HP_RATE                 | Getherable objects HP multipiler                                                                                                                                 | 1.000000                                                                                     | Float                                  |
 | COLLECTION_OBJECT_RESPAWN_SPEED_RATE      | Getherable objects respawn interval - The smaller the number, the faster the regeneration                                                                        | 1.000000                                                                                     | Float                                  |
 | ENEMY_DROP_ITEM_RATE                      | Dropped Items Multipiler                                                                                                                                         | 1.000000                                                                                     | Float                                  |
-| DEATH_PENALTY                             | Death Penalty</br>None: No death penalty</br>Item: Drops items other than equipment</br>ItemAndEquipment: Drops all items</br>All: Drops all PALs and all items. | All                                                                                          | `None`,`Item`,`ItemAndEquipment`,`All` |
+| DEATH_PENALTY                             | Death Penalty</br>None: No death penalty</br>Item: Drops items other than equipment</br>ItemAndEquipment: Drops all items and equipment</br>All: Drops all PALs and all items. | Item                                                                                         | `None`,`Item`,`ItemAndEquipment`,`All` |
 | ENABLE_PLAYER_TO_PLAYER_DAMAGE            | Allows players to cause damage to players                                                                                                                        | False                                                                                        | Boolean                                |
 | ENABLE_FRIENDLY_FIRE                      | Allow friendly fire                                                                                                                                              | False                                                                                        | Boolean                                |
 | ENABLE_INVADER_ENEMY                      | Enable invaders                                                                                                                                                  | True                                                                                         | Boolean                                |
@@ -704,7 +724,7 @@ For example:
 | AUTO_RESET_GUILD_TIME_NO_ONLINE_PLAYERS   | Time to automatically reset guild when no players are online                                                                                                     | 72.000000                                                                                    | Float                                  |
 | GUILD_PLAYER_MAX_NUM                      | Max player of Guild                                                                                                                                              | 20                                                                                           | Integer                                |
 | BASE_CAMP_MAX_NUM_IN_GUILD                | Max bases of Guild                                                                                                                                               | 4                                                                                            | Integer                                |
-| PAL_EGG_DEFAULT_HATCHING_TIME             | Time(h) to incubate massive egg                                                                                                                                  | 72.000000                                                                                    | Float                                  |
+| PAL_EGG_DEFAULT_HATCHING_TIME             | Time(h) to incubate massive egg                                                                                                                                  | 1.000000                                                                                     | Float                                  |
 | WORK_SPEED_RATE                           | Work speed muliplier                                                                                                                                             | 1.000000                                                                                     | Float                                  |
 | AUTO_SAVE_SPAN                           | Time between autosaves (seconds)                                                                                                                                             | 30.000000                                                                                     | Float                                  |
 | IS_MULTIPLAY                              | Enable multiplayer                                                                                                                                               | False                                                                                        | Boolean                                |
@@ -714,7 +734,7 @@ For example:
 | CAN_PICKUP_OTHER_GUILD_DEATH_PENALTY_DROP | Allow players from other guilds to pick up death penalty items                                                                                                   | False                                                                                        | Boolean                                |
 | ENABLE_NON_LOGIN_PENALTY                  | Enable non-login penalty                                                                                                                                         | True                                                                                         | Boolean                                |
 | ENABLE_FAST_TRAVEL                        | Enable fast travel                                                                                                                                               | True                                                                                         | Boolean                                |
-| IS_START_LOCATION_SELECT_BY_MAP           | Enable selecting of start location                                                                                                                               | True                                                                                         | Boolean                                |
+| IS_START_LOCATION_SELECT_BY_MAP           | Enable selecting of start location                                                                                                                               | False                                                                                        | Boolean                                |
 | EXIST_PLAYER_AFTER_LOGOUT                 | Toggle for deleting players when they log off                                                                                                                    | False                                                                                        | Boolean                                |
 | ENABLE_DEFENSE_OTHER_GUILD_PLAYER         | Allows defense against other guild players                                                                                                                       | False                                                                                        | Boolean                                |
 | INVISIBLE_OTHER_GUILD_BASE_CAMP_AREA_FX         | unknown                                                                                                                       | False                                                                                        | Boolean                                |
@@ -723,9 +743,9 @@ For example:
 | COOP_PLAYER_MAX_NUM                       | Maximum number of players in a guild                                                                                                                             | 4                                                                                            | Integer                                |
 | REGION                                    | Region                                                                                                                                                           |                                                                                              | String                                 |
 | USEAUTH                                   | Use authentication                                                                                                                                               | True                                                                                         | Boolean                                |
-| BAN_LIST_URL                              | Which ban list to use                                                                                                                                            | [https://api.palworldgame.com/api/banlist.txt](https://api.palworldgame.com/api/banlist.txt) | string                                 |
-| SHOW_PLAYER_LIST                          | Enable show player list                                                                                                                                          | True                                                                                         | Boolean                                |
-| CHAT_POST_LIMIT_PER_MINUTE                          | Amount of messages players can send per minute                                                                                                                                          | 10                                                                                         | Integer                                |
+| BAN_LIST_URL                              | Which ban list to use                                                                                                                                            | [https://b.palworldgame.com/api/banlist.txt](https://b.palworldgame.com/api/banlist.txt)     | string                                 |
+| SHOW_PLAYER_LIST                          | Enable show player list                                                                                                                                          | False                                                                                        | Boolean                                |
+| CHAT_POST_LIMIT_PER_MINUTE                          | Amount of messages players can send per minute                                                                                                                                          | 30                                                                                         | Integer                                |
 | SUPPLY_DROP_SPAN                          |  Interval for supply drop (minutes)                                                                                                                                         | 180                                                                                         | Integer                                |
 | ENABLE_PREDATOR_BOSS_PAL                          |  Enable Predator boss as pals                                                                                                                                         | true                                                                                         | boolean                                |
 | MAX_BUILDING_LIMIT_NUM                          |  Maximum number of buildings per base                                                                                                                                         | 0 (unlimited)                                                                                         | Integer                                |
@@ -736,6 +756,35 @@ For example:
 | EQUIPMENT_DURABILITY_DAMAGE_RATE           | Equipment durability damage rate.                                                                                                                               | 1.000000                                                                                     | Float                                |
 | ITEM_CONTAINER_FORCE_MARK_DIRTY_INTERVAL           | Item container force mark dirty interval.                                                                                                                               | 1.000000                                                                                     | Float                                |
 | ITEM_CORRUPTION_MULTIPLIER           | Item corruption multiplier.                                                                                                                               | 1.000000                                                                                     | Float                                |
+| PHYSICS_ACTIVE_DROP_ITEM_MAX_NUM           | Maximum number of active dropped items in physics.                                                                                                                               | -1                                                                                           | Integer                                |
+| ALLOW_CLIENT_MOD                           | Allow client mods.                                                                                                                               | True                                                                                         | Boolean                                |
+| PLAYER_DATA_PAL_STORAGE_UPDATE_CHECK_TICK_INTERVAL | Player data pal storage update check tick interval.                                                                                                                               | 1.000000                                                                                     | Float                                  |
+| LOG_FORMAT_TYPE                            | Log format type.                                                                                                                               | Text                                                                                         | String                                 |
+| IS_SHOW_JOIN_LEFT_MESSAGE                  | Show join and leave messages.                                                                                                                               | True                                                                                         | Boolean                                |
+| MONSTER_FARM_ACTION_SPEED_RATE             | Monster farm action speed rate.                                                                                                                               | 1.000000                                                                                     | Float                                  |
+| DENY_TECHNOLOGY_LIST                       | Technology IDs to deny.                                                                                                                               |                                                                                              | String                                 |
+| GUILD_REJOIN_COOLDOWN_MINUTES              | Guild rejoin cooldown in minutes.                                                                                                                               | 0                                                                                            | Integer                                |
+| AUTO_TRANSFER_MASTER_CHECK_INTERVAL_SECONDS | Interval between guild master transfer checks.                                                                                                                               | 3600.000000                                                                                  | Float                                  |
+| AUTO_TRANSFER_MASTER_THRESHOLD_DAYS        | Days of inactivity before guild master transfer.                                                                                                                               | 14                                                                                           | Integer                                |
+| MAX_GUILDS_PER_FRAME                       | Maximum guilds processed per frame.                                                                                                                               | 10                                                                                           | Integer                                |
+| BLOCK_RESPAWN_TIME                          | Respawn block time.                                                                                                                               | 5.000000                                                                                     | Float                                  |
+| RESPAWN_PENALTY_DURATION_THRESHOLD         | Respawn penalty duration threshold.                                                                                                                               | 0.000000                                                                                     | Float                                  |
+| RESPAWN_PENALTY_TIME_SCALE                 | Respawn penalty time scale.                                                                                                                               | 2.000000                                                                                     | Float                                  |
+| DISPLAY_PVP_ITEM_NUM_ON_WORLD_MAP_BASE_CAMP | Display PvP item count on world map for base camps.                                                                                                                               | False                                                                                        | Boolean                                |
+| DISPLAY_PVP_ITEM_NUM_ON_WORLD_MAP_PLAYER    | Display PvP item count on world map for players.                                                                                                                               | False                                                                                        | Boolean                                |
+| ADDITIONAL_DROP_ITEM_WHEN_PLAYER_KILLING_IN_PVP_MODE | Additional drop item type when killing a player in PvP mode.                                                                                                                               | PlayerDropItem                                                                               | String                                 |
+| ADDITIONAL_DROP_ITEM_WHEN_PLAYER_KILLING_IN_PVP_MODE_NUM | Additional drop item count when killing a player in PvP mode.                                                                                                                               | 1                                                                                            | Integer                                |
+| ADDITIONAL_DROP_ITEM_WHEN_PLAYER_KILLING_IN_PVP_MODE_ENABLED | Enable additional drop items when killing a player in PvP mode.                                                                                                                               | False                                                                                        | Boolean                                |
+| ENABLE_VOICE_CHAT                          | Enable voice chat.                                                                                                                               | False                                                                                        | Boolean                                |
+| VOICE_CHAT_MAX_VOLUME_DISTANCE             | Voice chat max volume distance.                                                                                                                               | 3000.000000                                                                                  | Float                                  |
+| VOICE_CHAT_ZERO_VOLUME_DISTANCE            | Voice chat zero volume distance.                                                                                                                               | 15000.000000                                                                                 | Float                                  |
+| ALLOW_ENHANCE_STAT_HEALTH                   | Allow stat point enhancement for health.                                                                                                                               | True                                                                                         | Boolean                                |
+| ALLOW_ENHANCE_STAT_ATTACK                   | Allow stat point enhancement for attack.                                                                                                                               | True                                                                                         | Boolean                                |
+| ALLOW_ENHANCE_STAT_STAMINA                  | Allow stat point enhancement for stamina.                                                                                                                               | True                                                                                         | Boolean                                |
+| ALLOW_ENHANCE_STAT_WEIGHT                   | Allow stat point enhancement for weight.                                                                                                                               | True                                                                                         | Boolean                                |
+| ALLOW_ENHANCE_STAT_WORK_SPEED               | Allow stat point enhancement for work speed.                                                                                                                               | True                                                                                         | Boolean                                |
+| ENABLE_BUILDING_PLAYER_UID_DISPLAY          | Show building owner player ID.                                                                                                                               | False                                                                                        | Boolean                                |
+| BUILDING_NAME_DISPLAY_CACHE_TTL_SECONDS     | Building name display cache TTL in seconds.                                                                                                                               | 60                                                                                           | Integer                                |
 
 ### Manually
 
@@ -810,6 +859,36 @@ The manifest corresponds to the release date/update versions. Manifests can be f
 | 0.3.8   | 8676441150170012909 |
 | 0.3.9   | 7493245879597781625 |
 | 0.3.10  | 752220234171168889  |
+| 0.3.11  | 2179856120374736396 |
+| 0.3.12  | 4799126612816973970 |
+| 0.4.12  | 8740356471807192597 |
+| 0.4.13  | 7797657007844256194 |
+| 0.4.14  | 2423583208459052375 |
+| 0.4.15  | 1367771460964183113 |
+| 0.4.15.66880 | 7437307725616060428 |
+| 0.5.1   | 6596731130030310701 |
+| 0.5.2   | 267999471071788047  |
+| 0.5.3   | 7732507078282743071 |
+| 0.5.4   | 5539885758268531766 |
+| 0.5.5   | 7828355383304947    |
+| 0.6.0   | 3764729529995383980 |
+| 0.6.1   | 7756643464666999838 |
+| 0.6.2   | 827371074969047862  |
+| 0.6.4   | 3612882697748699584 |
+| 0.6.5   | 5432643748200410263 |
+| 0.6.6   | 6415730362733705279 |
+| 0.6.7   | 3995671553375425471 |
+| 0.6.8   | 7543835373978771853 |
+| 0.6.9   | 3893574637546538559 |
+| 0.7.0   | 425036885590395310  |
+| 0.7.1   | 2194336714352902668 |
+| 0.7.2   | 7743228609268535996 |
+| 0.7.3   | 5125159522749666228 |
+| 1.0.0   | 3392720560779800260 |
+| 1.0.1   | 2167164727892555341 |
+| 1.0.2   | 1078324976643066553 |
+| 1.0.2.100993 | 6205737992414484907 |
+| 1.0.2.101103 | 1480973772525600530 |
 
 ## Reporting Issues/Feature Requests
 
